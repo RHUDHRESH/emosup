@@ -1,9 +1,11 @@
 """
-Core chatbot implementation using LangChain and Ollama
+Core chatbot implementation using multiple AI backends
 
 Enhancements:
 - Windowed conversation memory to reduce context growth
 - Emotion-aware prompt that leverages analyzer hints when available
+- Multiple free AI backends (Groq, HuggingFace, Together.ai)
+- Automatic fallback when backends are unavailable
 """
 from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
@@ -28,7 +30,7 @@ class EmotionalSupportChatbot:
         )
         self.conversation_chain = self._create_conversation_chain()
 
-    def _initialize_llm(self) -> Ollama:
+    def _initialize_llm(self) -> Optional[Ollama]:
         """Initialize Ollama LLM with Gemma model (optional now!)"""
         try:
             llm = Ollama(
@@ -36,11 +38,12 @@ class EmotionalSupportChatbot:
                 model=config.MODEL_NAME,
                 temperature=0.7,
             )
+            print("✓ Ollama LLM initialized successfully")
             return llm
         except Exception as e:
             # Ollama not available - will use free backends!
             print(f"Ollama not available: {str(e)}")
-            print("✓ Using free AI backends instead!")
+            print("✓ Will use free AI backends (Groq/HuggingFace/Together.ai)")
             return None
 
     def _create_conversation_chain(self) -> LLMChain:
@@ -112,20 +115,51 @@ Assistant instructions:
                 # Analyzer not available; proceed without hints
                 pass
 
-            # Get response from conversation chain
-            response = self.conversation_chain.predict(
-                user_input=user_input,
-                emotion_hint=emotion_hint,
-                coping_suggestion=coping_suggestion,
-            )
+            # Try LangChain/Ollama first if available
+            if self.llm is not None:
+                try:
+                    response = self.conversation_chain.predict(
+                        user_input=user_input,
+                        emotion_hint=emotion_hint,
+                        coping_suggestion=coping_suggestion,
+                    )
+                    return {
+                        "response": response.strip(),
+                        "is_crisis": False,
+                        "emotion": emotion_hint,
+                        "backend": "ollama"
+                    }
+                except Exception as e:
+                    print(f"Ollama failed: {e}, trying free backends...")
 
-            return {
-                "response": response.strip(),
-                "is_crisis": False,
-                "emotion": None
-            }
-        except Exception as e:
-            # Fallback to emotion-based supportive responses when LLM unavailable
+            # Fallback to free AI backends (Groq, HuggingFace, Together)
+            try:
+                from free_ai_backends import FreeAIBackend
+                free_backend = FreeAIBackend()
+
+                # Build a therapeutic prompt
+                prompt = f"{user_input}"
+                if coping_suggestion:
+                    prompt += f"\n(Context: User might benefit from {coping_suggestion})"
+
+                response = free_backend.get_response(prompt, emotion_hint)
+
+                # Add conversation to memory manually since we're not using LangChain
+                self.memory.save_context(
+                    {"input": user_input},
+                    {"output": response}
+                )
+
+                return {
+                    "response": response,
+                    "is_crisis": False,
+                    "emotion": emotion_hint,
+                    "backend": "free_ai"
+                }
+            except Exception as e:
+                print(f"Free backends failed: {e}, using built-in responses...")
+
+            # Final fallback to emotion-based supportive responses
             fallback_responses = {
                 "sad": "I hear that you're feeling down, and I want you to know that your feelings are completely valid. It's okay to feel sad sometimes. Remember that difficult emotions are temporary, and you have the strength to get through this. Is there something specific that's been weighing on you?",
                 "anxious": "I can sense that you're feeling anxious right now, and I want to remind you that you're not alone in this feeling. Anxiety can be overwhelming, but you've gotten through moments like this before, and you will again. Try taking a few deep breaths with me. What's on your mind that's causing you to feel this way?",
@@ -145,7 +179,16 @@ Assistant instructions:
             return {
                 "response": response_text,
                 "is_crisis": False,
-                "emotion": emotion_hint
+                "emotion": emotion_hint,
+                "backend": "fallback"
+            }
+        except Exception as e:
+            print(f"Critical error in get_response: {e}")
+            return {
+                "response": "I'm here for you. Can you tell me more about how you're feeling?",
+                "is_crisis": False,
+                "emotion": "neutral",
+                "backend": "emergency_fallback"
             }
 
     def reset_conversation(self):

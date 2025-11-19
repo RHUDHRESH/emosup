@@ -109,12 +109,24 @@ AI: "I'm noticing a pattern - this deep fear of abandonment.
 
 ## 📁 Key Files
 
-- `SETUP_AND_RUN.bat` - One-click installer
-- `api_server.py` - Flask API
-- `therapy_agent_system.py` - Multi-agent system
-- `advanced_therapy_frameworks.py` - 5 frameworks
-- `memory_system.py` - Long-term memory
-- `app/therapy/page.tsx` - Voice interface
+### Core System
+- `api_server.py` - Flask API with `/api/chat` and `/api/therapy` endpoints
+- `chatbot.py` - Main chatbot with multi-backend support
+- `free_ai_backends.py` - Groq/HuggingFace/Together.ai integration
+- `therapy_agent_system.py` - Multi-agent therapeutic system
+- `advanced_therapy_frameworks.py` - 5 therapy frameworks (ACT, CBT, DBT, Schema, Narrative)
+- `memory_system.py` - Long-term memory with Supabase sync
+- `emotion_analyzer.py` - Emotion detection and analysis
+
+### Frontend
+- `app/page.tsx` - Main chat interface (uses `/api/chat`)
+- `app/therapy/page.tsx` - Advanced therapy interface (uses `/api/therapy`)
+- `components/voice-therapy-interface.tsx` - Voice interaction
+
+### Setup & Testing
+- `SETUP_AND_RUN.bat` - Windows one-click installer
+- `test_groq_integration.py` - Verify Groq API setup
+- `QUICK_START_GROQ.md` - Groq setup guide
 
 ---
 
@@ -125,13 +137,33 @@ For the **best** AI responses (still FREE!):
 1. Go to: https://console.groq.com/keys
 2. Sign up (no credit card!)
 3. Create API key
-4. Run `SETUP_AND_RUN.bat` and paste when asked
+4. **Windows**: Run `SETUP_AND_RUN.bat` and paste when asked
+5. **Linux/Mac**:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add: GROQ_API_KEY=gsk_your_key_here
+   ```
 
 **Groq FREE tier:**
 - ✅ 30 requests/minute
 - ✅ Llama 3.3 70B model
 - ✅ No expiration
 - ✅ No credit card required
+
+### 🧪 Test Your Setup
+
+After adding your API key:
+
+```bash
+python test_groq_integration.py
+```
+
+You should see:
+- ✅ Groq API key found
+- ✅ FreeAIBackend working
+- ✅ Chatbot integration successful
+
+**See [QUICK_START_GROQ.md](QUICK_START_GROQ.md) for detailed setup guide.**
 
 ---
 
