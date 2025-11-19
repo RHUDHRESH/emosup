@@ -29,7 +29,7 @@ class EmotionalSupportChatbot:
         self.conversation_chain = self._create_conversation_chain()
 
     def _initialize_llm(self) -> Ollama:
-        """Initialize Ollama LLM with Gemma model"""
+        """Initialize Ollama LLM with Gemma model (optional now!)"""
         try:
             llm = Ollama(
                 base_url=config.OLLAMA_BASE_URL,
@@ -38,7 +38,10 @@ class EmotionalSupportChatbot:
             )
             return llm
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Ollama: {str(e)}")
+            # Ollama not available - will use free backends!
+            print(f"Ollama not available: {str(e)}")
+            print("✓ Using free AI backends instead!")
+            return None
 
     def _create_conversation_chain(self) -> LLMChain:
         """Create the conversation chain with prompt template"""
