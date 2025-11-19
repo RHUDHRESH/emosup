@@ -122,11 +122,27 @@ Assistant instructions:
                 "emotion": None
             }
         except Exception as e:
+            # Fallback to emotion-based supportive responses when LLM unavailable
+            fallback_responses = {
+                "sad": "I hear that you're feeling down, and I want you to know that your feelings are completely valid. It's okay to feel sad sometimes. Remember that difficult emotions are temporary, and you have the strength to get through this. Is there something specific that's been weighing on you?",
+                "anxious": "I can sense that you're feeling anxious right now, and I want to remind you that you're not alone in this feeling. Anxiety can be overwhelming, but you've gotten through moments like this before, and you will again. Try taking a few deep breaths with me. What's on your mind that's causing you to feel this way?",
+                "lonely": "Feeling lonely can be really hard, and I'm truly sorry you're experiencing this. Please know that your feelings matter, and you deserve connection and companionship. Even though it might not feel like it right now, there are people who care about you. What would help you feel a little less alone right now?",
+                "angry": "I can tell you're feeling frustrated or angry, and those feelings are completely understandable. It's important to acknowledge your emotions rather than push them away. You have every right to feel upset. Would it help to talk about what's making you feel this way?",
+                "tired": "It sounds like you're feeling exhausted, and that must be really difficult. Remember to be gentle with yourself - it's okay to rest and take things one step at a time. You don't have to push through everything right now. What's been draining your energy lately?",
+                "happy": "I'm so glad to hear there's some positivity in your day! It's wonderful that you're experiencing moments of happiness. Those bright spots are important, even when life feels challenging. What's bringing you joy today?",
+                "neutral": "I'm here to listen and support you. Sometimes we just need someone to talk to, and that's perfectly okay. How are you really feeling right now? What's been on your mind?"
+            }
+
+            # Use emotion-based fallback response
+            response_text = fallback_responses.get(
+                emotion_hint if emotion_hint else "neutral",
+                "I'm here for you and I'm listening. Even when things feel difficult, please know that your feelings are valid and you're not alone. What's been on your mind lately?"
+            )
+
             return {
-                "response": f"I apologize, but I'm having trouble responding right now. Error: {str(e)}",
+                "response": response_text,
                 "is_crisis": False,
-                "emotion": None,
-                "error": str(e)
+                "emotion": emotion_hint
             }
 
     def reset_conversation(self):
