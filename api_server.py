@@ -20,6 +20,7 @@ CORS(app)  # Enable CORS for React frontend
 # Initialize chatbot and emotion analyzer (singleton instances)
 chatbot = None
 emotion_analyzer = None
+therapy_system = None
 
 def get_chatbot():
     """Get or create chatbot instance without crashing on import errors"""
@@ -205,6 +206,63 @@ def chat():
             "error": str(e)
         }), 500
 
+@app.route('/api/therapy', methods=['POST'])
+def therapy_session():
+    """Advanced therapy endpoint with multi-agent system"""
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
+
+        # Lazy-load therapy system
+        global therapy_system
+        if therapy_system is None:
+            try:
+                from therapy_agent_system import TherapySystem
+                therapy_system = TherapySystem()
+            except Exception as e:
+                print(f"Error loading therapy system: {e}")
+                return jsonify({
+                    "response": "I'm here for you. Can you tell me more about what you're feeling?",
+                    "error": "Therapy system unavailable, using fallback"
+                }), 200
+
+        # Get emotion analysis
+        analyzer = get_emotion_analyzer()
+        emotion = "neutral"
+        emotion_intensity = 0.5
+
+        if analyzer:
+            analysis = analyzer.analyze_text(message)
+            emotion = analysis.get('primary_emotion', 'neutral')
+
+            # Calculate intensity from sentiment polarity
+            polarity = analysis.get('sentiment', {}).get('polarity', 0)
+            emotion_intensity = abs(polarity)  # 0-1 scale
+
+        # Process through therapy system
+        result = therapy_system.process_input(message, emotion, emotion_intensity)
+
+        return jsonify({
+            "response": result.get("response"),
+            "emotion": emotion,
+            "therapy_mode": result.get("therapy_mode"),
+            "session_phase": result.get("session_phase"),
+            "is_crisis": result.get("is_crisis", False),
+            "voice_tone": result.get("voice_tone"),
+            "suggested_techniques": result.get("suggested_techniques", []),
+            "detected_distortions": result.get("detected_distortions", [])
+        })
+
+    except Exception as e:
+        print(f"Error in therapy endpoint: {e}")
+        return jsonify({
+            "response": "I'm here to listen and support you. What's on your mind?",
+            "error": str(e)
+        }), 200  # Return 200 so frontend doesn't break
+
 @app.route('/api/reset', methods=['POST'])
 def reset_conversation():
     """Reset the conversation"""
@@ -212,6 +270,13 @@ def reset_conversation():
         bot = get_chatbot()
         if bot:
             bot.reset_conversation()
+
+        global therapy_system
+        if therapy_system:
+            # Reset therapy system
+            from therapy_agent_system import TherapySystem
+            therapy_system = TherapySystem()
+
         return jsonify({"status": "success", "message": "Conversation reset"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
