@@ -8,6 +8,14 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import random
 
+# Import advanced therapy frameworks
+try:
+    from advanced_therapy_frameworks import AdvancedTherapyFrameworks
+    ADVANCED_FRAMEWORKS_AVAILABLE = True
+except Exception as e:
+    print(f"Advanced frameworks not available: {e}")
+    ADVANCED_FRAMEWORKS_AVAILABLE = False
+
 
 class TherapyMode(Enum):
     """Different therapeutic approaches"""
@@ -55,6 +63,14 @@ class TherapistAgent:
             session_insights=[],
             conversation_depth=0
         )
+
+        # Initialize advanced frameworks if available
+        self.advanced_frameworks = None
+        if ADVANCED_FRAMEWORKS_AVAILABLE:
+            try:
+                self.advanced_frameworks = AdvancedTherapyFrameworks()
+            except Exception as e:
+                print(f"Could not initialize advanced frameworks: {e}")
 
         # Therapeutic knowledge base
         self.cognitive_distortions = {
@@ -224,6 +240,21 @@ class TherapistAgent:
     def _generate_intervention(self, user_input: str, distortions: List[str]) -> str:
         """Generate therapeutic intervention"""
 
+        # Try advanced frameworks if available and conversation is deep enough
+        if self.advanced_frameworks and self.context.conversation_depth >= 2:
+            try:
+                advanced_intervention = self.advanced_frameworks.select_framework(
+                    user_input=user_input,
+                    emotion=self.context.current_emotion,
+                    conversation_depth=self.context.conversation_depth
+                )
+                if advanced_intervention and advanced_intervention.prompt:
+                    return advanced_intervention.prompt
+            except Exception as e:
+                print(f"Error using advanced frameworks: {e}")
+                # Fall through to basic interventions
+
+        # Basic interventions (fallback or early in conversation)
         if self.context.therapy_mode == TherapyMode.CBT and distortions:
             # Address cognitive distortion
             distortion = distortions[0]

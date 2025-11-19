@@ -21,6 +21,7 @@ CORS(app)  # Enable CORS for React frontend
 chatbot = None
 emotion_analyzer = None
 therapy_system = None
+memory_system = None
 
 def get_chatbot():
     """Get or create chatbot instance without crashing on import errors"""
@@ -208,10 +209,11 @@ def chat():
 
 @app.route('/api/therapy', methods=['POST'])
 def therapy_session():
-    """Advanced therapy endpoint with multi-agent system"""
+    """Advanced therapy endpoint with multi-agent system and long-term memory"""
     try:
         data = request.get_json()
         message = data.get('message', '').strip()
+        session_id = data.get('session_id', 'default-session')
 
         if not message:
             return jsonify({"error": "Message is required"}), 400
@@ -229,6 +231,16 @@ def therapy_session():
                     "error": "Therapy system unavailable, using fallback"
                 }), 200
 
+        # Lazy-load memory system
+        global memory_system
+        if memory_system is None:
+            try:
+                from memory_system import LongTermMemorySystem
+                memory_system = LongTermMemorySystem()
+            except Exception as e:
+                print(f"Error loading memory system: {e}")
+                # Continue without memory - not critical
+
         # Get emotion analysis
         analyzer = get_emotion_analyzer()
         emotion = "neutral"
@@ -242,11 +254,54 @@ def therapy_session():
             polarity = analysis.get('sentiment', {}).get('polarity', 0)
             emotion_intensity = abs(polarity)  # 0-1 scale
 
+        # Get user ID (anonymous but consistent)
+        user_id = None
+        continuity_prompt = None
+        if memory_system:
+            user_id = memory_system.get_anonymous_user_id(session_id)
+
+            # Get session summary for continuity
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                summary = loop.run_until_complete(memory_system.get_session_summary(user_id))
+                continuity_prompt = summary.get('continuity_prompt')
+                loop.close()
+            except Exception as e:
+                print(f"Error getting session summary: {e}")
+
         # Process through therapy system
         result = therapy_system.process_input(message, emotion, emotion_intensity)
 
+        # Add continuity prompt if this is a returning user
+        response_text = result.get("response", "")
+        if continuity_prompt and therapy_system.therapist.context.conversation_depth == 1:
+            response_text = f"{continuity_prompt}\n\n{response_text}"
+
+        # Save to memory
+        if memory_system and user_id:
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(memory_system.remember(
+                    user_id=user_id,
+                    session_id=session_id,
+                    message=message,
+                    emotion=emotion,
+                    emotion_intensity=emotion_intensity,
+                    therapy_mode=result.get("therapy_mode", "supportive"),
+                    detected_patterns=result.get("detected_distortions", []),
+                    breakthroughs=[],
+                    concerns=[]
+                ))
+                loop.close()
+            except Exception as e:
+                print(f"Error saving memory: {e}")
+
         return jsonify({
-            "response": result.get("response"),
+            "response": response_text,
             "emotion": emotion,
             "therapy_mode": result.get("therapy_mode"),
             "session_phase": result.get("session_phase"),
@@ -258,6 +313,8 @@ def therapy_session():
 
     except Exception as e:
         print(f"Error in therapy endpoint: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "response": "I'm here to listen and support you. What's on your mind?",
             "error": str(e)
