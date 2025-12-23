@@ -12,7 +12,7 @@ This plan outlines the steps to migrate the inference engine and cleanup the inf
 ## Phase 2: Core Integration & Refactoring
 *Goal: Replace Ollama with Groq in the agent orchestration logic.*
 
-- [ ] Task: Write failing tests for Groq LLM initialization in `crew_bot.py`.
+- [x] Task: Write failing tests for Groq LLM initialization in `crew_bot.py`. [496a214]
 - [ ] Task: Implement Groq LLM integration in `crew_bot.py` using `langchain_groq` or direct API.
 - [ ] Task: Refactor `api_server.py` to remove local Ollama health checks.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core Integration & Refactoring' (Protocol in workflow.md)
