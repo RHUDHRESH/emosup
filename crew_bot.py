@@ -15,6 +15,7 @@ except ImportError:
 HAS_LANGCHAIN = False
 HAS_GROQ_LANGCHAIN = False
 HAS_GROQ_NATIVE = False
+ollama_lib = None
 
 # Try LangChain Groq
 try:

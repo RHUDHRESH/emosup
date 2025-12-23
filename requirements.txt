@@ -9,4 +9,11 @@ python-dotenv==1.0.1
 bcrypt==4.1.2
 flask==3.0.0
 flask-cors==4.0.0
+<<<<<<< Updated upstream
 supabase==2.0.0
+=======
+crewai
+groq
+pytest
+flake8
+>>>>>>> Stashed changes

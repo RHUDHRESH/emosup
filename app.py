@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-from chatbot import EmotionalSupportChatbot
+from crew_bot import EmotionalSupportCrew
 from emotion_analyzer import EmotionAnalyzer
 from database import Database
 import config
@@ -143,7 +143,7 @@ def chat_interface():
     # Initialize chatbot if not already done
     if st.session_state.chatbot is None:
         try:
-            st.session_state.chatbot = EmotionalSupportChatbot()
+            st.session_state.chatbot = EmotionalSupportCrew()
         except Exception as e:
             st.error(f"Failed to initialize chatbot: {str(e)}")
             st.info("Please make sure Ollama is running with the Gemma model installed.")

@@ -108,6 +108,11 @@ class Database:
             )
         """)
 
+        # Improvement: Database Indices for performance
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mood_user ON mood_logs(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+
         self.conn.commit()
 
     # User Management

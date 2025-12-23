@@ -9,14 +9,15 @@
 
 ## 1. Introduction
 
-The Emotional Assistance Chatbot is an AI-powered application designed to provide empathetic emotional support and reduce feelings of loneliness. Using advanced natural language processing and the Gemma 4B language model, the chatbot engages users in compassionate conversations, detects emotions, and offers personalized coping strategies.
+The Emotional Assistance Chatbot is an AI-powered application designed to provide empathetic emotional support and reduce feelings of loneliness. Using the **CrewAI multi-agent framework** and the Gemma 2B language model, the chatbot engages users in compassionate conversations, detects emotions, and offers personalized coping strategies through specialized AI roles.
 
 **Key Technologies:**
-- LangChain for conversation management
-- Ollama for local LLM inference (Gemma 4B)
-- Streamlit for web interface
+- **CrewAI** for multi-agent orchestration
+- Ollama for local LLM inference (Gemma 2B)
+- Streamlit & Next.js for user interfaces
 - SQLite for data persistence
 - TextBlob for sentiment analysis
+- **GitHub Actions** for CI/CD
 
 ---
 

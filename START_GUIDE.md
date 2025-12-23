@@ -13,16 +13,22 @@ Before starting, ensure you have:
 
 - [ ] **Python 3.8+** installed and added to PATH
 - [ ] **Node.js 18+** installed (for Next.js frontend)
-- [ ] **Ollama** installed and running
-- [ ] **Gemma 2B model** downloaded via Ollama
-- [ ] At least **8GB RAM** available
-- [ ] Stable internet connection (for initial setup)
+- [ ] **Groq API key** configured (recommended)
+- [ ] **Ollama** installed (optional local fallback)
+- [ ] **Gemma 2B model** downloaded via Ollama (optional local fallback)
+- [ ] At least **8GB RAM** available (for local models)
+- [ ] Stable internet connection (for Groq and setup)
 
 ---
 
 ## Part 1: Initial Setup (One-Time Only)
 
-### Step 1: Install Ollama
+### Step 1: Configure Groq (Recommended)
+
+1. Create or reuse a Groq API key.
+2. Set `GROQ_API_KEY` in your `.env` file (see Step 6).
+
+### Step 2: Optional - Install Ollama
 
 1. Download Ollama from: https://ollama.com
 2. Install it following the platform-specific instructions
@@ -31,7 +37,7 @@ Before starting, ensure you have:
    ollama --version
    ```
 
-### Step 2: Download the AI Model
+### Step 3: Optional - Download a Local Model
 
 Open a terminal and run:
 ```bash
@@ -47,7 +53,7 @@ ollama list
 
 You should see `gemma2:2b` in the list.
 
-### Step 3: Install Python Dependencies
+### Step 4: Install Python Dependencies
 
 1. Navigate to the project directory:
    ```bash
@@ -81,7 +87,7 @@ You should see `gemma2:2b` in the list.
    python -m textblob.download_corpora
    ```
 
-### Step 4: Install Node.js Dependencies (For Next.js Frontend)
+### Step 5: Install Node.js Dependencies (For Next.js Frontend)
 
 If you want to use the Next.js frontend:
 
@@ -91,7 +97,7 @@ If you want to use the Next.js frontend:
    npm install
    ```
 
-### Step 5: Configure Environment Variables
+### Step 6: Configure Environment Variables
 
 1. Copy the example environment file:
    ```bash
@@ -101,14 +107,15 @@ If you want to use the Next.js frontend:
 
 2. The default `.env` file contains:
    ```
+   GROQ_API_KEY=your_groq_api_key_here
+   MODEL_NAME=llama3-8b-8192
    OLLAMA_BASE_URL=http://localhost:11434
-   MODEL_NAME=gemma2:2b
    APP_TITLE=Emotional Support Companion
    ```
 
-   You typically don't need to change these unless Ollama is running on a different port.
+   You typically only need to change `MODEL_NAME` or `OLLAMA_BASE_URL` if you use Ollama.
 
-### Step 6: Verify Setup
+### Step 7: Verify Setup
 
 Run the test script to verify everything is working:
 ```bash
@@ -127,9 +134,9 @@ You can run either the Streamlit app OR the Next.js frontend. Choose based on yo
 
 **Best for:** Full experience with authentication, mood tracking, analytics, and all features.
 
-#### Step 1: Start Ollama (if not already running)
+#### Step 1: Start Ollama (only if using local inference)
 
-Ollama usually starts automatically, but if needed:
+If you're using Groq, skip this step. If you're using Ollama:
 ```bash
 ollama serve
 ```
@@ -186,8 +193,9 @@ Once logged in, you can:
 
 **Best for:** Quick, simple chatbot interface without authentication.
 
-#### Step 1: Start Ollama (if not already running)
+#### Step 1: Start Ollama (only if using local inference)
 
+If you're using Groq, skip this step. If you're using Ollama:
 ```bash
 ollama serve
 ```
@@ -252,11 +260,11 @@ http://localhost:3000
 ## Part 3: What Should Be Running
 
 ### For Streamlit App:
-- ✅ **Ollama** service (running on port 11434)
+- ✅ **Groq** configured (`GROQ_API_KEY`) or **Ollama** service (port 11434)
 - ✅ **Streamlit** app (running on port 8501)
 
 ### For Next.js Frontend:
-- ✅ **Ollama** service (running on port 11434)
+- ✅ **Groq** configured (`GROQ_API_KEY`) or **Ollama** service (port 11434)
 - ✅ **Flask API** server (running on port 5000)
 - ✅ **Next.js** dev server (running on port 3000)
 
@@ -268,13 +276,13 @@ http://localhost:3000
 
 1. Open terminal
 2. Activate venv: `venv\Scripts\activate`
-3. Start Ollama (if not auto-running): `ollama serve`
+3. Start Ollama (only if using local inference): `ollama serve`
 4. Run: `streamlit run app.py`
 5. Open browser to http://localhost:8501
 
 ### Quick Start (Next.js):
 
-1. Terminal 1: `ollama serve`
+1. Terminal 1: If using Ollama, `ollama serve` (Groq users can skip)
 2. Terminal 2: `venv\Scripts\activate` then `python api_server.py`
 3. Terminal 3: `npm run dev`
 4. Open browser to http://localhost:3000
@@ -283,7 +291,13 @@ http://localhost:3000
 
 ## Troubleshooting
 
-### Problem: "Failed to connect to Ollama"
+### Problem: "Missing Groq API key"
+
+**Solution:**
+1. Set `GROQ_API_KEY` in your `.env`
+2. Restart the app or API server
+
+### Problem: "Failed to connect to Ollama" (Local Fallback)
 
 **Solution:**
 1. Make sure Ollama is running: `ollama serve`
@@ -291,7 +305,7 @@ http://localhost:3000
 3. Verify port 11434 is not blocked by firewall
 4. Check `.env` file has correct `OLLAMA_BASE_URL`
 
-### Problem: "Model 'gemma2:2b' not found"
+### Problem: "Model 'gemma2:2b' not found" (Ollama)
 
 **Solution:**
 ```bash
@@ -320,10 +334,10 @@ Wait for the download to complete (about 1.5GB).
 2. Reinstall dependencies: `pip install -r requirements.txt --upgrade`
 3. Download TextBlob data: `python -m textblob.download_corpora`
 
-### Problem: Slow responses from chatbot
+### Problem: Slow responses from chatbot (Ollama)
 
 **Solutions:**
-- Use smaller model: `gemma2:2b` (already default)
+- Use a smaller local model: `gemma2:2b`
 - Close other applications to free RAM
 - Ensure you have at least 8GB RAM available
 - Check CPU usage - inference is CPU-intensive
@@ -366,11 +380,11 @@ Wait for the download to complete (about 1.5GB).
 
 ## Important Notes
 
-1. **Ollama must be running** before starting either app
+1. **If using Ollama**, it must be running before starting either app
 2. **For Next.js frontend**, both Flask API and Next.js servers must be running
 3. **Virtual environment** should be activated before running Python scripts
 4. **Database** is created automatically on first run in `data/emosup.db`
-5. **All data is stored locally** - no data is sent to external servers (except Ollama for inference)
+5. **All data is stored locally** - inference calls go to Groq or Ollama if configured
 
 ---
 
@@ -393,7 +407,7 @@ If you encounter issues:
 1. Run the test script: `python test_setup.py`
 2. Check error messages in the terminal
 3. Verify all prerequisites are installed
-4. Ensure Ollama is running and model is downloaded
+4. Ensure Groq is configured or Ollama is running with a model downloaded
 5. Check the main README.md for detailed troubleshooting
 
 ---
@@ -401,14 +415,14 @@ If you encounter issues:
 ## Summary
 
 **Streamlit App:**
-1. Start Ollama: `ollama serve`
+1. Set `GROQ_API_KEY` in `.env` (or start Ollama: `ollama serve`)
 2. Activate venv: `venv\Scripts\activate`
 3. Run: `streamlit run app.py`
 4. Open: http://localhost:8501
 
 **Next.js Frontend:**
-1. Terminal 1: `ollama serve`
-2. Terminal 2: `venv\Scripts\activate` → `python api_server.py`
+1. Terminal 1: If using Ollama, `ollama serve` (Groq users can skip)
+2. Terminal 2: `venv\Scripts\activate` then `python api_server.py`
 3. Terminal 3: `npm run dev`
 4. Open: http://localhost:3000
 

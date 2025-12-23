@@ -4,28 +4,29 @@
 
 ## 5-Minute Setup
 
-### 1. Install Ollama
-Download from: https://ollama.com
-
-### 2. Install Gemma Model
+### 1. Create Environment File
 ```bash
-ollama pull gemma2:2b
+copy .env.example .env
 ```
+Set `GROQ_API_KEY` in `.env` (recommended).
 
-### 3. Install Python Dependencies
+### 2. Install Python Dependencies
 ```bash
 pip install -r requirements.txt
 python -m textblob.download_corpora
 ```
 
-### 4. Create Environment File
+### 3. Optional - Install Ollama
+Download from: https://ollama.com
+
+### 4. Optional - Install Gemma Model
 ```bash
-copy .env.example .env
+ollama pull gemma2:2b
 ```
 
 ### 5. Run the Application
 ```bash
-# Terminal 1: Start Ollama (if not auto-started)
+# Terminal 1: Start Ollama (only if using local inference)
 ollama serve
 
 # Terminal 2: Start the app
@@ -54,7 +55,10 @@ You can create a test account:
 
 ## Common Issues
 
-### "Failed to connect to Ollama"
+### "Missing Groq API key"
+Set `GROQ_API_KEY` in `.env`, then restart the app.
+
+### "Failed to connect to Ollama" (Local fallback)
 ```bash
 # Make sure Ollama is running
 ollama serve

@@ -189,7 +189,9 @@ def chat():
         return jsonify({"error": "Too many requests. Please take a deep breath and try again later."}), 429
 
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON payload"}), 400
         message = data.get('message', '').strip()
         logger.info(f"Received message from {request.remote_addr}")
         
