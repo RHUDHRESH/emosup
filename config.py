@@ -6,9 +6,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Ollama Configuration
+# Groq Configuration
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Ollama Configuration (Legacy/Fallback)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemma2:2b")
+
+# Model Configuration
+# Default to a model supported by Groq (e.g., Llama 3 8B)
+MODEL_NAME = os.getenv("MODEL_NAME", "llama3-8b-8192")
 
 # Application Settings
 APP_TITLE = os.getenv("APP_TITLE", "Emotional Support Companion")
@@ -86,8 +92,15 @@ Remember: Your goal is to provide companionship, emotional support, and help use
 
 CRISIS_KEYWORDS = [
     "suicide", "suicidal", "kill myself", "end my life",
-    "want to die", "better off dead", "harm myself"
+    "want to die", "better off dead", "harm myself",
+    "overdose", "cutting myself", "self-harm", "hurt myself"
 ]
+
+# Improvement 16: Therapeutic session settings
+MAX_HISTORY_LENGTH = 10
+EMOTION_INTENSITY_THRESHOLD = 0.6
+SUPPORT_EMAIL = "support@emosupport.example.com"
+
 
 CRISIS_RESPONSE = """I'm really concerned about what you're sharing. Your life matters, and there are people who want to help you through this difficult time.
 
