@@ -6,7 +6,7 @@ This plan outlines the steps to migrate the inference engine and cleanup the inf
 *Goal: Prepare the project for Groq and remove legacy infrastructure.*
 
 - [x] Task: Update environment configuration (`.env.example`, `config.py`) to support Groq. [0cc8422]
-- [ ] Task: Remove Docker artifacts (`Dockerfile`).
+- [x] Task: Remove Docker artifacts (`Dockerfile`). [2ad804e]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Environment & Configuration' (Protocol in workflow.md)
 
 ## Phase 2: Core Integration & Refactoring
