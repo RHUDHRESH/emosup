@@ -2,9 +2,8 @@
 Flask API server for the React/Next frontend
 
 Changes:
-- Lazy-import heavy modules so the API can boot even if Python deps are missing
-- Flight check returns HTTP 200 always with granular status (ready/degraded)
-- Direct Ollama connectivity probe without requiring LangChain/LLM init
+- Replaced Ollama connectivity probes with Groq status checks
+- Improved health/flight checks for cloud-based inference
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -13,13 +12,50 @@ import urllib.request
 import urllib.error
 import socket
 import config
+import logging
+from time import time
+
+# Improvement 6: Structured Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("API_Server")
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
+# Improvement 7: Basic Rate Limiting State
+ip_requests = {}
+
+def check_rate_limit():
+    ip = request.remote_addr
+    now = time()
+    if ip not in ip_requests:
+        ip_requests[ip] = []
+    # Keep only requests from the last minute
+    ip_requests[ip] = [t for t in ip_requests[ip] if now - t < 60]
+    if len(ip_requests[ip]) > 30: # 30 requests per minute
+        return False
+    ip_requests[ip].append(now)
+    return True
+
 # Initialize chatbot and emotion analyzer (singleton instances)
 chatbot = None
 emotion_analyzer = None
+db = None
+
+def get_db():
+    """Get or create database instance"""
+    global db
+    if db is None:
+        try:
+            from database import Database
+            db = Database()
+        except Exception as e:
+            print(f"Error initializing database: {e}")
+            return None
+    return db
 
 def get_chatbot():
     """Get or create chatbot instance without crashing on import errors"""
@@ -27,12 +63,12 @@ def get_chatbot():
     if chatbot is None:
         try:
             # Lazy import to avoid failing API boot when deps are missing
-            from chatbot import EmotionalSupportChatbot  # type: ignore
+            from crew_bot import EmotionalSupportCrew  # type: ignore
         except Exception as e:
-            print(f"Error importing chatbot module: {e}")
+            print(f"Error importing crew_bot module: {e}")
             return None
         try:
-            chatbot = EmotionalSupportChatbot()
+            chatbot = EmotionalSupportCrew()
         except Exception as e:
             print(f"Error initializing chatbot: {e}")
             return None
@@ -54,36 +90,21 @@ def get_emotion_analyzer():
             return None
     return emotion_analyzer
 
-def check_ollama_connection(timeout: float = 1.0):
-    """Probe Ollama HTTP API directly without third-party deps.
-
+def check_groq_status():
+    """Verify Groq API configuration status.
+    
     Returns a dict with status and message.
     """
-    base = config.OLLAMA_BASE_URL.rstrip("/")
-    url = f"{base}/api/tags"  # lightweight list of installed models
-    req = urllib.request.Request(url, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            if 200 <= resp.status < 300:
-                try:
-                    data = json.loads(resp.read().decode("utf-8") or "{}")
-                    models = [m.get("name", "") for m in data.get("models", [])]
-                except Exception:
-                    models = []
-                return {
-                    "status": "connected",
-                    "message": "Ollama connection is active",
-                    "models": models,
-                }
-            return {
-                "status": "degraded",
-                "message": f"Ollama responded with status {resp.status}",
-            }
-    except (urllib.error.URLError, socket.timeout) as e:
+    if config.GROQ_API_KEY:
         return {
-            "status": "disconnected",
-            "message": f"Cannot connect to Ollama at {base}: {e}",
+            "status": "configured",
+            "message": "Groq API key is present",
+            "model": config.MODEL_NAME
         }
+    return {
+        "status": "missing_config",
+        "message": "Groq API key is missing. Please set GROQ_API_KEY in .env"
+    }
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -92,21 +113,31 @@ def health_check():
         "status": "healthy",
         "api_server": "running",
         "chatbot": "unknown",
-        "ollama": "unknown",
+        "groq": "unknown",
         "message": "API server is running",
     }
 
-    # Check Ollama first (does not require LangChain)
-    ollama = check_ollama_connection()
-    status["ollama"] = ollama.get("status", "unknown")
+    # Check Groq configuration
+    groq_stat = check_groq_status()
+    status["groq"] = groq_stat.get("status", "unknown")
 
-    # Check chatbot status (may require LangChain)
+    # Check chatbot status
     try:
         bot = get_chatbot()
         status["chatbot"] = "ready" if bot else "not_initialized"
-        if not bot and status["ollama"] != "connected":
+        
+        # Check if actually using an engine
+        if bot:
+            if bot.llm or bot.groq_client:
+                status["llm_engine"] = "active"
+            else:
+                status["llm_engine"] = "inactive"
+                status["status"] = "degraded"
+                status["message"] = "Chatbot initialized but no LLM engine active."
+        
+        if not bot and status["groq"] != "configured":
             status["status"] = "degraded"
-            status["message"] = "API OK; LLM not ready. Check Ollama and model install."
+            status["message"] = "API OK; Groq not configured. Please add GROQ_API_KEY."
     except Exception as e:
         status["chatbot"] = "error"
         status["status"] = "degraded"
@@ -128,22 +159,22 @@ def flight_check():
         "message": "Flask API server is running"
     }
 
-    # Ollama status (does not require LangChain)
-    ollama = check_ollama_connection()
-    checks["services"]["ollama"] = ollama
+    # Groq status
+    checks["services"]["groq"] = check_groq_status()
 
     # Chatbot status (lazy init)
     try:
         bot = get_chatbot()
         if bot:
+            engine = "Groq" if (bot.llm or bot.groq_client) else "None"
             checks["services"]["chatbot"] = {
                 "status": "ready",
-                "message": "Chatbot is initialized and ready"
+                "message": f"Chatbot is initialized using {engine} engine"
             }
         else:
             checks["services"]["chatbot"] = {
                 "status": "not_ready",
-                "message": "Chatbot not initialized. Check Ollama service."
+                "message": "Chatbot not initialized. Check Groq configuration."
             }
     except Exception as e:
         checks["services"]["chatbot"] = {
@@ -154,7 +185,7 @@ def flight_check():
     # Overall
     all_ready = (
         checks["services"].get("api_server", {}).get("status") == "online"
-        and checks["services"].get("ollama", {}).get("status") == "connected"
+        and checks["services"].get("groq", {}).get("status") == "configured"
         and checks["services"].get("chatbot", {}).get("status") == "ready"
     )
     checks["overall_status"] = "ready" if all_ready else "degraded"
@@ -165,9 +196,15 @@ def flight_check():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """Handle chat messages from frontend"""
+    # Improvement 8: Apply Rate Limiting
+    if not check_rate_limit():
+        logger.warning(f"Rate limit exceeded for IP: {request.remote_addr}")
+        return jsonify({"error": "Too many requests. Please take a deep breath and try again later."}), 429
+
     try:
         data = request.get_json()
         message = data.get('message', '').strip()
+        logger.info(f"Received message from {request.remote_addr}")
         
         if not message:
             return jsonify({"error": "Message is required"}), 400
@@ -176,20 +213,33 @@ def chat():
         bot = get_chatbot()
         if bot is None:
             return jsonify({
-                "response": "I apologize, but I'm having trouble connecting to the AI service right now. Please make sure Ollama is running.",
+                "response": "I apologize, but I'm having trouble connecting to the AI service right now. Please verify the Groq API configuration.",
                 "error": "Chatbot initialization failed"
             }), 500
         
-        # Get chatbot response
+        # Get chatbot response (CrewAI returns the structured dict)
         response_data = bot.get_response(message)
         
-        # Optionally analyze emotion
-        analyzer = get_emotion_analyzer()
-        if analyzer:
-            analysis = analyzer.analyze_text(message)
-            response_data['emotion'] = analysis.get('primary_emotion')
-            response_data['sentiment'] = analysis.get('sentiment', {})
-            response_data['coping_suggestion'] = analysis.get('coping_suggestion')
+        # Persistence Logic
+        database = get_db()
+        if database:
+            try:
+                # We use a default user_id of 1 if no session is provided 
+                user_id = 1 
+                conv_id = 1 # Simple default for testing/prototype
+                
+                # Save user message
+                database.save_message(
+                    conv_id, "user", message, 
+                    response_data.get("emotion"), 
+                    0, 0 # placeholders for polarity/subjectivity
+                )
+                # Save assistant message
+                database.save_message(conv_id, "assistant", response_data.get("response"))
+                # Log mood
+                database.log_mood(user_id, 0, response_data.get("emotion"))
+            except Exception as e:
+                print(f"Database save error: {e}")
         
         return jsonify({
             "response": response_data.get("response", "I'm here for you. Can you tell me more?"),
@@ -218,6 +268,5 @@ def reset_conversation():
 
 if __name__ == '__main__':
     print("Starting Flask API server on http://localhost:5000")
-    print("Make sure Ollama is running with the Gemma model installed:")
-    print("  ollama pull gemma2:2b")
+    print("Cloud Inference enabled via Groq API.")
     app.run(debug=True, port=5000, host='0.0.0.0')
