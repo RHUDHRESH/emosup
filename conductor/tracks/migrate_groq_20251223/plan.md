@@ -2,12 +2,12 @@
 
 This plan outlines the steps to migrate the inference engine and cleanup the infrastructure.
 
-## Phase 1: Environment & Configuration
+## Phase 1: Environment & Configuration [checkpoint: 98ad99c]
 *Goal: Prepare the project for Groq and remove legacy infrastructure.*
 
 - [x] Task: Update environment configuration (`.env.example`, `config.py`) to support Groq. [0cc8422]
 - [x] Task: Remove Docker artifacts (`Dockerfile`). [2ad804e]
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Environment & Configuration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Environment & Configuration' (Protocol in workflow.md) [98ad99c]
 
 ## Phase 2: Core Integration & Refactoring
 *Goal: Replace Ollama with Groq in the agent orchestration logic.*
